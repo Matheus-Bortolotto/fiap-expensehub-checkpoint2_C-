@@ -1,4 +1,6 @@
 using ExpenseHub.Api.Domain.Entities;
+using ExpenseHub.Api.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseHub.Api.Data;
@@ -7,7 +9,7 @@ namespace ExpenseHub.Api.Data;
 /// Represents the Entity Framework Core database context for ExpenseHub.
 /// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options)
-    : DbContext(options)
+    : IdentityDbContext<ApplicationUser>(options)
 {
     /// <summary>
     /// Gets the expenses stored in the database.
@@ -30,11 +32,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<PaymentRecord> PaymentRecords => Set<PaymentRecord>();
 
     /// <inheritdoc />
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
+        base.OnModelCreating(builder);
 
-        modelBuilder.Entity<Expense>(entity =>
+        builder.Entity<Expense>(entity =>
         {
             entity.Property(expense => expense.OwnerId)
                 .IsRequired();
@@ -56,14 +58,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .HasForeignKey<PaymentRecord>(payment => payment.ExpenseId);
         });
 
-        modelBuilder.Entity<ExpenseCategory>(entity =>
+        builder.Entity<ExpenseCategory>(entity =>
         {
             entity.Property(category => category.Name)
                 .IsRequired()
                 .HasMaxLength(100);
         });
 
-        modelBuilder.Entity<ExpenseHistory>(entity =>
+        builder.Entity<ExpenseHistory>(entity =>
         {
             entity.Property(history => history.Action)
                 .IsRequired()
@@ -80,7 +82,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .HasForeignKey(history => history.ExpenseId);
         });
 
-        modelBuilder.Entity<PaymentRecord>(entity =>
+        builder.Entity<PaymentRecord>(entity =>
         {
             entity.Property(payment => payment.ActorId)
                 .IsRequired();
