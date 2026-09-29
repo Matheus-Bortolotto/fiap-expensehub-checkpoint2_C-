@@ -91,3 +91,25 @@ Entregue:
 - documentação atualizada.
 
 O projeto deve compilar sem erros e ser entregue sem warnings para receber a pontuação integral de Qualidade de Código.
+
+
+## Banco de dados
+
+O projeto utiliza SQLite como banco de dados relacional por meio do Entity Framework Core.
+
+### Provider
+
+- SQLite
+- `Microsoft.EntityFrameworkCore.Sqlite`
+- `Microsoft.EntityFrameworkCore.Design`
+
+### Connection string
+
+A configuração está disponível em:
+
+`ExpenseHub.Api/appsettings.json`
+
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Data Source=expensehub.db"
+}
