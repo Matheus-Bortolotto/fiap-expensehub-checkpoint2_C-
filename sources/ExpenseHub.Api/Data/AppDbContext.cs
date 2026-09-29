@@ -3,17 +3,33 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseHub.Api.Data;
 
+/// <summary>
+/// Represents the Entity Framework Core database context for ExpenseHub.
+/// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options)
     : DbContext(options)
 {
+    /// <summary>
+    /// Gets the expenses stored in the database.
+    /// </summary>
     public DbSet<Expense> Expenses => Set<Expense>();
 
+    /// <summary>
+    /// Gets the expense categories stored in the database.
+    /// </summary>
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
 
+    /// <summary>
+    /// Gets the expense history entries stored in the database.
+    /// </summary>
     public DbSet<ExpenseHistory> ExpenseHistories => Set<ExpenseHistory>();
 
+    /// <summary>
+    /// Gets the payment records stored in the database.
+    /// </summary>
     public DbSet<PaymentRecord> PaymentRecords => Set<PaymentRecord>();
 
+    /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
