@@ -1,7 +1,10 @@
 using System;
+using System.Threading.Tasks;
 using ExpenseHub.Api.Data;
+using ExpenseHub.Api.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +14,7 @@ namespace ExpenseHub.Api;
 
 internal static class Program
 {
-    public static void Main(string[] args)
+    internal static async Task Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -23,9 +26,29 @@ internal static class Program
         builder.Services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(connectionString));
 
+        builder.Services
+            .AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+
+                options.Password.RequiredLength = 8;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+            })
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<AppDbContext>()
+            .AddSignInManager();
+
         builder.Services.AddOpenApi();
 
         WebApplication app = builder.Build();
+
+        using (IServiceScope scope = app.Services.CreateScope())
+        {
+            await IdentitySeeder.SeedAsync(scope.ServiceProvider);
+        }
 
         if (app.Environment.IsDevelopment())
         {
@@ -35,6 +58,6 @@ internal static class Program
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
             .WithName("GetHealth");
 
-        app.Run();
+        await app.RunAsync();
     }
 }
