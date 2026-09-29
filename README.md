@@ -1,97 +1,70 @@
-# Checkpoint 2 — ExpenseHub
+# ExpenseHub — Checkpoint 2 C# Software Development
 
-Checkpoint de C# em grupos de até 3 pessoas para construção de uma Application Programming Interface (API) corporativa de reembolsos.
+API REST desenvolvida em ASP.NET Core para gerenciamento de solicitações corporativas de reembolso.
 
-O prazo de entrega é **13 de outubro de 2026**. O grupo deverá implementar autenticação, autorização, fluxo de aprovação e reprovação, pagamento simulado, histórico e testes unitários.
+O sistema permite o cadastro e autenticação de usuários, controle de acesso por roles, criação e acompanhamento de despesas, aprovação, reprovação, pagamento e histórico das operações.
 
-## Criar seu repositório
+## Integrantes
 
-1. Clique em **Use this template**.
-2. Selecione **Create a new repository**.
-3. Crie um repositório **público** em uma das contas do grupo.
-4. Adicione os demais integrantes como colaboradores.
-5. Clone o repositório.
+- Luan Ramos Garcia de Souza — RM558537
+- Matheus Bortolotto — RM555189
+- Matheus Ricciotti — RM556930
 
-Não use fork. As issues permanecem neste repositório original como especificação comum da turma.
+## Tecnologias
 
-Os commits serão utilizados para avaliar a participação. Todos os membros do grupo
-devem possuir mais de um commit no repositório.
+- .NET 10
+- ASP.NET Core
+- ASP.NET Core Identity
+- Entity Framework Core
+- SQLite
+- JWT Bearer Authentication
+- MSTest
 
-## Fluxo de trabalho
-
-Para cada issue:
-
-1. leia os critérios no repositório original;
-2. crie uma branch com o identificador, por exemplo `i06-ownership`;
-3. implemente e valide a feature;
-4. abra uma pull request no seu próprio repositório;
-5. use um título como `I06 — Ownership e matriz de acesso`;
-6. adicione na descrição uma referência completa, como `Racass/checkpoint-csharpracass-expensehub#6`;
-7. não use `Closes`, `Fixes` ou `Resolves`, pois a issue original deve permanecer aberta;
-8. conclua a auto-revisão e faça o merge.
-
-## Estrutura inicial
+## Estrutura
 
 ```text
 sources/
 ├── ExpenseHub.slnx
 ├── ExpenseHub.Api/
+│   ├── Auth/
+│   ├── Data/
+│   ├── Domain/
+│   │   ├── Entities/
+│   │   └── Enums/
+│   ├── Identity/
+│   ├── Migrations/
+│   ├── Program.cs
+│   └── appsettings.json
+│
 └── ExpenseHub.UnitTests/
 ```
 
-A solução começa sem Identity, banco, domínio ou testes funcionais. Toda implementação avaliada deve ser criada por você.
+## Requisitos
 
-## Comandos
+Para executar o projeto é necessário possuir:
 
-```shell
-dotnet restore ./sources/ExpenseHub.slnx
-dotnet build ./sources/ExpenseHub.slnx
-dotnet test ./sources/ExpenseHub.slnx
-dotnet run --project ./sources/ExpenseHub.Api/ExpenseHub.Api.csproj
+- .NET SDK 10
+- Entity Framework Core CLI (`dotnet-ef`)
+
+Para verificar a versão instalada:
+
+```powershell
+dotnet --version
 ```
 
-O endpoint inicial `GET /health` existe apenas para confirmar que a aplicação inicia.
+Para instalar o `dotnet-ef`:
 
-## Documentação
+```powershell
+dotnet tool install --global dotnet-ef --version 10.0.12
+```
 
-- [Enunciado](docs/ENUNCIADO.md)
-- [Requisitos e contratos](docs/REQUISITOS.md)
-- [Rubrica](docs/RUBRICA.md)
-- [Matriz de autorização](docs/MATRIZ-AUTORIZACAO.md)
-- [Processo no GitHub](docs/PROCESSO-GITHUB.md)
-- [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
-- [Regras do pipeline de qualidade](docs/code-quality-rules.md)
+## Restaurar dependências
 
-## Banco de dados
+A partir da pasta `sources`:
 
-Você pode utilizar Microsoft SQL Server LocalDB, Oracle Database, SQLite ou outro provider relacional compatível com Entity Framework Core.
-
-A escolha não gera pontos. Documente no README do seu repositório:
-
-- provider e pacote utilizado;
-- configuração necessária;
-- criação ou atualização do banco;
-- como iniciar a aplicação.
-
-Não versione senhas, tokens ou connection strings sensíveis.
-
-## Testes
-
-Somente testes unitários escritos por você entram na nota. Testes de integração, end-to-end ou de interface são permitidos, mas opcionais e sem pontuação.
-
-Os testes unitários devem executar sem banco, rede ou serviço externo.
-
-## Entrega
-
-Entregue:
-
-- URL do repositório público;
-- commit Secure Hash Algorithm (SHA) final;
-- integração contínua executada;
-- documentação atualizada.
-
-O projeto deve compilar sem erros e ser entregue sem warnings para receber a pontuação integral de Qualidade de Código.
-
+```powershell
+dotnet restore .\ExpenseHub.slnx
+```
 
 ## Banco de dados
 
@@ -99,7 +72,8 @@ O projeto utiliza SQLite como banco de dados relacional por meio do Entity Frame
 
 ### Provider
 
-- SQLite
+Pacotes utilizados:
+
 - `Microsoft.EntityFrameworkCore.Sqlite`
 - `Microsoft.EntityFrameworkCore.Design`
 
@@ -107,9 +81,282 @@ O projeto utiliza SQLite como banco de dados relacional por meio do Entity Frame
 
 A configuração está disponível em:
 
-`ExpenseHub.Api/appsettings.json`
+```text
+ExpenseHub.Api/appsettings.json
+```
+
+Configuração:
 
 ```json
 "ConnectionStrings": {
   "DefaultConnection": "Data Source=expensehub.db"
 }
+```
+
+O arquivo local `expensehub.db` não é versionado no Git.
+
+### Criar ou atualizar o banco
+
+A partir da pasta `sources`:
+
+```powershell
+dotnet ef database update `
+  --project .\ExpenseHub.Api\ExpenseHub.Api.csproj `
+  --startup-project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+### Criar uma nova migration
+
+Quando houver alteração no modelo:
+
+```powershell
+dotnet ef migrations add NomeDaMigration `
+  --project .\ExpenseHub.Api\ExpenseHub.Api.csproj `
+  --startup-project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+> `NomeDaMigration` deve ser substituído pelo nome real da migration.
+
+## Autenticação
+
+A aplicação utiliza ASP.NET Core Identity com autenticação JWT Bearer.
+
+### Roles
+
+As seguintes roles são criadas automaticamente:
+
+- `Admin`
+- `Employee`
+- `Approver`
+- `Finance`
+- `Auditor`
+
+O seed cria somente uma conta inicial e atribui a ela a role `Admin`.
+
+O seed é idempotente, portanto executar a aplicação novamente não deve duplicar usuários ou roles.
+
+## Configuração do Admin
+
+As credenciais do Admin não são armazenadas no código-fonte ou no `appsettings.json`.
+
+O projeto utiliza .NET User Secrets.
+
+Inicialize os User Secrets, caso necessário:
+
+```powershell
+dotnet user-secrets init --project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+Configure o e-mail do Admin:
+
+```powershell
+dotnet user-secrets set "AdminSeed:Email" "admin@expensehub.local" --project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+Configure uma senha segura:
+
+```powershell
+dotnet user-secrets set "AdminSeed:Password" "SUA-SENHA-SEGURA" --project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+## Configuração JWT
+
+As configurações públicas do JWT estão em `appsettings.json`.
+
+Exemplo:
+
+```json
+"Jwt": {
+  "Issuer": "ExpenseHub.Api",
+  "Audience": "ExpenseHub.Client",
+  "ExpirationMinutes": 60
+}
+```
+
+A chave utilizada para assinatura do token deve ser configurada por User Secrets:
+
+```powershell
+dotnet user-secrets set "Jwt:Key" "SUA-CHAVE-JWT-SEGURA" --project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+Nunca versione a chave JWT real.
+
+## Executar a aplicação
+
+A partir da pasta `sources`:
+
+```powershell
+dotnet run --project .\ExpenseHub.Api\ExpenseHub.Api.csproj
+```
+
+Em ambiente local a API poderá iniciar, por exemplo, em:
+
+```text
+http://localhost:5245
+```
+
+A porta pode variar conforme o `launchSettings.json`.
+
+## Health Check
+
+Endpoint:
+
+```http
+GET /health
+```
+
+Resposta esperada:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## Login
+
+Endpoint:
+
+```http
+POST /login
+```
+
+Exemplo de requisição:
+
+```json
+{
+  "email": "admin@expensehub.local",
+  "password": "SUA-SENHA-SEGURA"
+}
+```
+
+Credenciais válidas retornam:
+
+- token JWT Bearer;
+- data de expiração;
+- roles do usuário.
+
+Exemplo de resposta:
+
+```json
+{
+  "accessToken": "TOKEN_JWT",
+  "expiresAtUtc": "2026-10-01T00:00:00Z",
+  "roles": [
+    "Admin"
+  ]
+}
+```
+
+Credenciais inválidas retornam:
+
+```text
+401 Unauthorized
+```
+
+Após qualquer alteração de roles, o usuário deve autenticar novamente para receber um novo token com as permissões atualizadas.
+
+## Modelo de domínio
+
+As entidades mínimas utilizadas pelo sistema são:
+
+- `Expense`
+- `ExpenseCategory`
+- `ExpenseHistory`
+- `PaymentRecord`
+
+Estados possíveis de uma despesa:
+
+```text
+Draft
+Submitted
+Approved
+Rejected
+Paid
+```
+
+## Fluxo de reembolso
+
+Fluxo principal previsto:
+
+```text
+Draft
+  ↓
+Submitted
+  ├── Approved
+  │      ↓
+  │     Paid
+  │
+  └── Rejected
+```
+
+`Rejected` e `Paid` são estados finais.
+
+## Build
+
+A partir da pasta `sources`:
+
+```powershell
+dotnet build .\ExpenseHub.slnx
+```
+
+O projeto deve compilar sem erros e sem warnings.
+
+## Testes
+
+Para executar os testes:
+
+```powershell
+dotnet test .\ExpenseHub.slnx
+```
+
+Os testes unitários do projeto ficam em:
+
+```text
+ExpenseHub.UnitTests
+```
+
+Os testes devem executar sem depender de:
+
+- banco de dados externo;
+- rede;
+- serviços externos.
+
+## Validação completa
+
+Antes da entrega:
+
+```powershell
+dotnet restore .\ExpenseHub.slnx
+dotnet build .\ExpenseHub.slnx
+dotnet test .\ExpenseHub.slnx
+```
+
+Também deve ser verificado o workflow `code-quality` no GitHub Actions.
+
+## Segurança
+
+Não devem ser versionados:
+
+- senhas;
+- tokens;
+- chaves JWT;
+- secrets;
+- bancos SQLite locais;
+- arquivos `.env`;
+- `appsettings.Development.json`;
+- `appsettings.Local.json`.
+
+Credenciais locais devem ser configuradas utilizando User Secrets.
+
+## Git
+
+O desenvolvimento é realizado utilizando branches individuais e Pull Requests para integração com a `main`.
+
+Todos os integrantes devem possuir múltiplos commits próprios representando contribuições reais ao projeto.
+
+As issues do checkpoint original são utilizadas como referência para implementação das funcionalidades.
+
+## Projeto acadêmico
+
+Projeto desenvolvido para o Checkpoint 2 da disciplina de Software Development C#.
