@@ -23,10 +23,12 @@ internal static class Program
 {
     internal static async Task Main(string[] args)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        WebApplicationBuilder builder =
+            WebApplication.CreateBuilder(args);
 
         string connectionString =
-            builder.Configuration.GetConnectionString("DefaultConnection")
+            builder.Configuration
+                .GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException(
                 "Connection string 'DefaultConnection' was not found.");
 
@@ -45,56 +47,79 @@ internal static class Program
             ?? throw new InvalidOperationException(
                 "Jwt:Audience configuration was not found.");
 
-        builder.Services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite(connectionString));
+        builder.Services.AddDbContext<AppDbContext>(
+            options =>
+                options.UseSqlite(connectionString));
 
         builder.Services
-            .AddIdentityCore<ApplicationUser>(options =>
-            {
-                options.User.RequireUniqueEmail = true;
+            .AddIdentityCore<ApplicationUser>(
+                options =>
+                {
+                    options.User.RequireUniqueEmail = true;
 
-                options.Password.RequiredLength = 8;
-                options.Password.RequireDigit = true;
-                options.Password.RequireLowercase = true;
-                options.Password.RequireUppercase = true;
-                options.Password.RequireNonAlphanumeric = true;
-            })
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequireDigit = true;
+                    options.Password.RequireLowercase = true;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireNonAlphanumeric =
+                        true;
+                })
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<AppDbContext>();
 
         builder.Services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters =
-                    new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
+            .AddAuthentication(
+                JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(
+                options =>
+                {
+                    options.TokenValidationParameters =
+                        new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidateLifetime = true,
+                            ValidateIssuerSigningKey = true,
 
-                        ValidIssuer = jwtIssuer,
-                        ValidAudience = jwtAudience,
+                            ValidIssuer = jwtIssuer,
+                            ValidAudience = jwtAudience,
 
-                        IssuerSigningKey =
-                            new SymmetricSecurityKey(
-                                Encoding.UTF8.GetBytes(jwtKey))
-                    };
-            });
+                            IssuerSigningKey =
+                                new SymmetricSecurityKey(
+                                    Encoding.UTF8.GetBytes(
+                                        jwtKey))
+                        };
+                });
 
         builder.Services.AddAuthorization();
 
         builder.Services.AddSingleton<JwtTokenService>();
-        builder.Services.AddScoped<ExpenseWorkflowService>();
+
+        builder.Services
+            .AddScoped<UserAdministrationService>();
+
+        builder.Services
+            .AddScoped<ExpenseDraftService>();
+
+        builder.Services
+            .AddScoped<ExpenseWorkflowService>();
 
         builder.Services.AddOpenApi();
 
         WebApplication app = builder.Build();
 
-        using (IServiceScope scope = app.Services.CreateScope())
+        using (IServiceScope scope =
+            app.Services.CreateScope())
         {
-            await IdentitySeeder.SeedAsync(scope.ServiceProvider);
+            await IdentitySeeder.SeedAsync(
+                scope.ServiceProvider);
+
+            AppDbContext context =
+                scope.ServiceProvider
+                    .GetRequiredService<AppDbContext>();
+
+            await ExpenseCategorySeeder.SeedAsync(
+                context);
         }
 
         if (app.Environment.IsDevelopment())
@@ -107,7 +132,11 @@ internal static class Program
 
         app.MapGet(
                 "/health",
-                () => Results.Ok(new { status = "ok" }))
+                () => Results.Ok(
+                    new
+                    {
+                        status = "ok"
+                    }))
             .WithName("GetHealth");
 
         app.MapPost(
@@ -118,7 +147,8 @@ internal static class Program
                 JwtTokenService tokenService) =>
             {
                 ApplicationUser? user =
-                    await userManager.FindByEmailAsync(request.Email);
+                    await userManager.FindByEmailAsync(
+                        request.Email);
 
                 if (user is null)
                 {
@@ -147,6 +177,9 @@ internal static class Program
             });
 
         app.MapUserEndpoints();
+
+        app.MapExpenseEndpoints();
+
         app.MapExpenseWorkflowEndpoints();
 
         await app.RunAsync();

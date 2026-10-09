@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Identity;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +12,7 @@ using Microsoft.AspNetCore.Routing;
 namespace ExpenseHub.Api.Users;
 
 /// <summary>
-/// Defines endpoints related to user registration.
+/// Defines endpoints related to user registration and administration.
 /// </summary>
 public static class UserEndpoints
 {
@@ -26,6 +27,18 @@ public static class UserEndpoints
         app.MapPost("/register", RegisterAsync)
             .AllowAnonymous()
             .WithName("RegisterUser");
+
+        app.MapGet("/api/admin/users", GetUsersAsync)
+            .RequireAuthorization(
+                policy => policy.RequireRole(ApplicationRoles.Admin))
+            .WithName("GetUsers");
+
+        app.MapPut(
+                "/api/admin/users/{id}/roles",
+                UpdateUserRolesAsync)
+            .RequireAuthorization(
+                policy => policy.RequireRole(ApplicationRoles.Admin))
+            .WithName("UpdateUserRoles");
 
         return app;
     }
@@ -105,5 +118,83 @@ public static class UserEndpoints
                 user.Id,
                 user.Email
             });
+    }
+
+    private static async Task<IResult> GetUsersAsync(
+        UserAdministrationService userAdministrationService)
+    {
+        IReadOnlyList<UserResponse> users =
+            await userAdministrationService.GetUsersAsync();
+
+        return Results.Ok(users);
+    }
+
+    private static async Task<IResult> UpdateUserRolesAsync(
+        string id,
+        UpdateUserRolesRequest request,
+        ClaimsPrincipal principal,
+        UserAdministrationService userAdministrationService)
+    {
+        string? actorUserId =
+            principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(actorUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        if (request.Roles is null)
+        {
+            return Results.ValidationProblem(
+                new Dictionary<string, string[]>
+                {
+                    ["Roles"] =
+                    [
+                        "The roles field is required."
+                    ]
+                });
+        }
+
+        UpdateUserRolesResult result =
+            await userAdministrationService.UpdateRolesAsync(
+                id,
+                request.Roles,
+                actorUserId);
+
+        return result switch
+        {
+            UpdateUserRolesResult.Success =>
+                Results.NoContent(),
+
+            UpdateUserRolesResult.UserNotFound =>
+                Results.NotFound(),
+
+            UpdateUserRolesResult.InvalidRole =>
+                Results.ValidationProblem(
+                    new Dictionary<string, string[]>
+                    {
+                        ["Roles"] =
+                        [
+                            "One or more roles are invalid."
+                        ]
+                    }),
+
+            UpdateUserRolesResult.CannotRemoveOwnAdminRole =>
+                Results.ValidationProblem(
+                    new Dictionary<string, string[]>
+                    {
+                        ["Roles"] =
+                        [
+                            "An Admin cannot remove their own Admin role."
+                        ]
+                    }),
+
+            _ =>
+                Results.Problem(
+                    statusCode:
+                        StatusCodes.Status500InternalServerError,
+                    title:
+                        "Unable to update the user's roles.")
+        };
     }
 }
