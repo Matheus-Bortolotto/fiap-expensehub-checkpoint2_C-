@@ -111,6 +111,19 @@ public static class ExpenseEndpoints
                 cancellationToken);
 
         if (result.Outcome ==
+            ExpenseDraftOutcome.InvalidDescription)
+        {
+            return Results.ValidationProblem(
+                new Dictionary<string, string[]>
+                {
+                    ["Description"] =
+                    [
+                        "The description must contain between 10 and 500 characters after trimming whitespace."
+                    ]
+                });
+        }
+
+        if (result.Outcome ==
             ExpenseDraftOutcome.InvalidCategory)
         {
             return Results.ValidationProblem(
@@ -188,6 +201,19 @@ public static class ExpenseEndpoints
             ExpenseDraftOutcome.Conflict)
         {
             return Results.Conflict();
+        }
+
+        if (result.Outcome ==
+            ExpenseDraftOutcome.InvalidDescription)
+        {
+            return Results.ValidationProblem(
+                new Dictionary<string, string[]>
+                {
+                    ["Description"] =
+                    [
+                        "The description must contain between 10 and 500 characters after trimming whitespace."
+                    ]
+                });
         }
 
         if (result.Outcome ==

@@ -38,6 +38,15 @@ public sealed class ExpenseDraftService
         string ownerId,
         CancellationToken cancellationToken)
     {
+        string normalizedDescription =
+            request.Description.Trim();
+
+        if (normalizedDescription.Length < 10 ||
+            normalizedDescription.Length > 500)
+        {
+            return ExpenseDraftResult.InvalidDescription();
+        }
+
         if (!request.ExpenseDate.HasValue ||
             request.ExpenseDate.Value.Date > DateTime.UtcNow.Date)
         {
@@ -58,7 +67,7 @@ public sealed class ExpenseDraftService
         Expense expense = new()
         {
             OwnerId = ownerId,
-            Description = request.Description.Trim(),
+            Description = normalizedDescription,
             Amount = request.Amount,
             ExpenseDate = request.ExpenseDate.Value.Date,
             ExpenseCategoryId = request.ExpenseCategoryId,
@@ -114,6 +123,15 @@ public sealed class ExpenseDraftService
             return ExpenseDraftResult.Conflict(expense);
         }
 
+        string normalizedDescription =
+            request.Description.Trim();
+
+        if (normalizedDescription.Length < 10 ||
+            normalizedDescription.Length > 500)
+        {
+            return ExpenseDraftResult.InvalidDescription();
+        }
+
         if (!request.ExpenseDate.HasValue ||
             request.ExpenseDate.Value.Date > DateTime.UtcNow.Date)
         {
@@ -130,9 +148,6 @@ public sealed class ExpenseDraftService
         {
             return ExpenseDraftResult.InvalidCategory();
         }
-
-        string normalizedDescription =
-            request.Description.Trim();
 
         DateTime normalizedExpenseDate =
             request.ExpenseDate.Value.Date;
@@ -304,6 +319,15 @@ public sealed class ExpenseDraftResult
         new(
             ExpenseDraftOutcome.InvalidExpenseDate,
             null);
+
+    /// <summary>
+    /// Creates an invalid description result.
+    /// </summary>
+    /// <returns>An invalid description result.</returns>
+    public static ExpenseDraftResult InvalidDescription() =>
+        new(
+            ExpenseDraftOutcome.InvalidDescription,
+            null);
 }
 
 /// <summary>
@@ -334,5 +358,10 @@ public enum ExpenseDraftOutcome
     /// <summary>
     /// The expense date is invalid.
     /// </summary>
-    InvalidExpenseDate
+    InvalidExpenseDate,
+
+    /// <summary>
+    /// The expense description is invalid.
+    /// </summary>
+    InvalidDescription
 }
