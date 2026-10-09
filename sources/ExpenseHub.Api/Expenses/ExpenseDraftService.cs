@@ -269,8 +269,7 @@ public sealed class ExpenseDraftResult
             expense);
 
     /// <summary>
-    /// Creates a result for an expense that was not found
-    /// in the user's ownership scope.
+    /// Creates a not found result.
     /// </summary>
     /// <returns>A not found result.</returns>
     public static ExpenseDraftResult NotFound() =>
@@ -279,9 +278,9 @@ public sealed class ExpenseDraftResult
             null);
 
     /// <summary>
-    /// Creates a result for an expense in an incompatible state.
+    /// Creates a conflict result.
     /// </summary>
-    /// <param name="expense">The expense with an invalid state.</param>
+    /// <param name="expense">The expense in an invalid state.</param>
     /// <returns>A conflict result.</returns>
     public static ExpenseDraftResult Conflict(Expense expense) =>
         new(
@@ -289,7 +288,7 @@ public sealed class ExpenseDraftResult
             expense);
 
     /// <summary>
-    /// Creates a result for an unknown expense category.
+    /// Creates an invalid category result.
     /// </summary>
     /// <returns>An invalid category result.</returns>
     public static ExpenseDraftResult InvalidCategory() =>
@@ -298,7 +297,7 @@ public sealed class ExpenseDraftResult
             null);
 
     /// <summary>
-    /// Creates a result for an invalid or future expense date.
+    /// Creates an invalid expense date result.
     /// </summary>
     /// <returns>An invalid expense date result.</returns>
     public static ExpenseDraftResult InvalidExpenseDate() =>
@@ -318,22 +317,22 @@ public enum ExpenseDraftOutcome
     Success,
 
     /// <summary>
-    /// The requested expense was not found in the user's scope.
+    /// The expense was not found.
     /// </summary>
     NotFound,
 
     /// <summary>
-    /// The expense is no longer editable or submitable.
+    /// The expense is in an incompatible state.
     /// </summary>
     Conflict,
 
     /// <summary>
-    /// The supplied expense category does not exist.
+    /// The category does not exist.
     /// </summary>
     InvalidCategory,
 
     /// <summary>
-    /// The supplied expense date is invalid or in the future.
+    /// The expense date is invalid.
     /// </summary>
     InvalidExpenseDate
 }

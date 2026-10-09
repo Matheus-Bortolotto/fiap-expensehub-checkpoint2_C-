@@ -4,21 +4,24 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Domain.Entities;
 using ExpenseHub.Api.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseHub.Api.Expenses;
 
 /// <summary>
-/// Maps endpoints for creating and editing expense drafts.
+/// Maps endpoints for creating, editing, submitting
+/// and querying expenses.
 /// </summary>
 public static class ExpenseEndpoints
 {
     /// <summary>
-    /// Maps expense draft endpoints.
+    /// Maps expense endpoints.
     /// </summary>
     /// <param name="app">The application route builder.</param>
     /// <returns>The supplied route builder.</returns>
@@ -47,6 +50,39 @@ public static class ExpenseEndpoints
                         ApplicationRoles.Employee))
             .WithName("UpdateExpense");
 
+        expenses.MapPost(
+                "/{id:int}/submit",
+                SubmitAsync)
+            .RequireAuthorization(
+                policy =>
+                    policy.RequireRole(
+                        ApplicationRoles.Employee))
+            .WithName("SubmitExpense");
+
+        expenses.MapGet(
+                string.Empty,
+                GetAllAsync)
+            .RequireAuthorization(
+                policy =>
+                    policy.RequireRole(
+                        ApplicationRoles.Employee,
+                        ApplicationRoles.Approver,
+                        ApplicationRoles.Finance,
+                        ApplicationRoles.Auditor))
+            .WithName("GetExpenses");
+
+        expenses.MapGet(
+                "/{id:int}",
+                GetByIdAsync)
+            .RequireAuthorization(
+                policy =>
+                    policy.RequireRole(
+                        ApplicationRoles.Employee,
+                        ApplicationRoles.Approver,
+                        ApplicationRoles.Finance,
+                        ApplicationRoles.Auditor))
+            .WithName("GetExpenseById");
+
         return app;
     }
 
@@ -61,7 +97,8 @@ public static class ExpenseEndpoints
 
         if (validationErrors.Count > 0)
         {
-            return Results.ValidationProblem(validationErrors);
+            return Results.ValidationProblem(
+                validationErrors);
         }
 
         string ownerId =
@@ -127,7 +164,8 @@ public static class ExpenseEndpoints
 
         if (validationErrors.Count > 0)
         {
-            return Results.ValidationProblem(validationErrors);
+            return Results.ValidationProblem(
+                validationErrors);
         }
 
         string ownerId =
@@ -188,6 +226,110 @@ public static class ExpenseEndpoints
 
         return Results.Ok(
             ToResponse(result.Expense));
+    }
+
+    private static async Task<IResult> SubmitAsync(
+        int id,
+        ClaimsPrincipal user,
+        ExpenseDraftService draftService,
+        CancellationToken cancellationToken)
+    {
+        string ownerId =
+            ExpenseAccessService.GetRequiredUserId(user);
+
+        ExpenseDraftResult result =
+            await draftService.SubmitAsync(
+                id,
+                ownerId,
+                cancellationToken);
+
+        return result.Outcome switch
+        {
+            ExpenseDraftOutcome.Success =>
+                Results.NoContent(),
+
+            ExpenseDraftOutcome.NotFound =>
+                Results.NotFound(),
+
+            ExpenseDraftOutcome.Conflict =>
+                Results.Conflict(),
+
+            _ =>
+                Results.StatusCode(
+                    StatusCodes.Status500InternalServerError)
+        };
+    }
+
+    private static async Task<IResult> GetAllAsync(
+        ClaimsPrincipal user,
+        AppDbContext context,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Expense> visibleExpenses =
+            ExpenseAccessService.ApplyVisibility(
+                context.Expenses.AsNoTracking(),
+                user);
+
+        List<ExpenseResponse> response =
+            await visibleExpenses
+                .OrderByDescending(
+                    expense => expense.Id)
+                .Select(
+                    expense =>
+                        new ExpenseResponse
+                        {
+                            Id = expense.Id,
+                            OwnerId = expense.OwnerId,
+                            Description = expense.Description,
+                            Amount = expense.Amount,
+                            ExpenseDate = expense.ExpenseDate,
+                            Status = expense.Status,
+                            ExpenseCategoryId =
+                                expense.ExpenseCategoryId
+                        })
+                .ToListAsync(cancellationToken);
+
+        return Results.Ok(response);
+    }
+
+    private static async Task<IResult> GetByIdAsync(
+        int id,
+        ClaimsPrincipal user,
+        AppDbContext context,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<Expense> visibleExpenses =
+            ExpenseAccessService.ApplyVisibility(
+                context.Expenses.AsNoTracking(),
+                user);
+
+        ExpenseResponse? response =
+            await visibleExpenses
+                .Where(
+                    expense =>
+                        expense.Id == id)
+                .Select(
+                    expense =>
+                        new ExpenseResponse
+                        {
+                            Id = expense.Id,
+                            OwnerId = expense.OwnerId,
+                            Description = expense.Description,
+                            Amount = expense.Amount,
+                            ExpenseDate = expense.ExpenseDate,
+                            Status = expense.Status,
+                            ExpenseCategoryId =
+                                expense.ExpenseCategoryId
+                        })
+                .SingleOrDefaultAsync(
+                    cancellationToken);
+
+        if (response is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(response);
     }
 
     private static Dictionary<string, string[]>
