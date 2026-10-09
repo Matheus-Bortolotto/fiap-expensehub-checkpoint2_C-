@@ -33,6 +33,5 @@ Os endpoints exigem JWT. Ausência ou invalidez de token permanece responsabilid
 
 ## Pontos ainda pendentes
 
-- Criar a migration após integrar I04/I05/I06–I08 na mesma árvore de código.
 - Adicionar testes de integração/unitários para aprovação, reprovação, pagamento e histórico usando um provider de teste. Nesta branch foram adicionados testes sem banco para a matriz de leitura.
 - Executar `dotnet restore`, `dotnet build` e `dotnet test` com o SDK .NET 10 antes de abrir PR. Esta máquina não possui o SDK instalado no PATH.
