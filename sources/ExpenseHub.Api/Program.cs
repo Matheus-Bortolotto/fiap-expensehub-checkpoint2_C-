@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Data;
+using ExpenseHub.Api.Expenses;
 using ExpenseHub.Api.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -84,6 +85,7 @@ internal static class Program
         builder.Services.AddAuthorization();
 
         builder.Services.AddSingleton<JwtTokenService>();
+        builder.Services.AddScoped<ExpenseWorkflowService>();
 
         builder.Services.AddOpenApi();
 
@@ -142,6 +144,8 @@ internal static class Program
 
                 return Results.Ok(response);
             });
+
+        app.MapExpenseWorkflowEndpoints();
 
         await app.RunAsync();
     }
