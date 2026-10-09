@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Expenses;
 using ExpenseHub.Api.Identity;
+using ExpenseHub.Api.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +16,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 namespace ExpenseHub.Api;
 
@@ -145,6 +146,7 @@ internal static class Program
                 return Results.Ok(response);
             });
 
+        app.MapUserEndpoints();
         app.MapExpenseWorkflowEndpoints();
 
         await app.RunAsync();
