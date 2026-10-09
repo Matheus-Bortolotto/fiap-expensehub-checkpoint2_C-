@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ExpenseHub.Api.Expenses;
 
 /// <summary>
-/// Handles the creation and editing of expense drafts.
+/// Handles the creation, editing and submission of expense drafts.
 /// </summary>
 public sealed class ExpenseDraftService
 {
@@ -96,11 +96,13 @@ public sealed class ExpenseDraftService
         CancellationToken cancellationToken)
     {
         Expense? expense =
-            await _context.Expenses.SingleOrDefaultAsync(
-                item =>
-                    item.Id == expenseId &&
-                    item.OwnerId == ownerId,
-                cancellationToken);
+            await _context.Expenses
+                .Include(item => item.History)
+                .SingleOrDefaultAsync(
+                    item =>
+                        item.Id == expenseId &&
+                        item.OwnerId == ownerId,
+                    cancellationToken);
 
         if (expense is null)
         {
@@ -185,10 +187,56 @@ public sealed class ExpenseDraftService
 
         return ExpenseDraftResult.Success(expense);
     }
+
+    /// <summary>
+    /// Submits an expense owned by the authenticated user.
+    /// </summary>
+    /// <param name="expenseId">The expense identifier.</param>
+    /// <param name="ownerId">The authenticated user's identifier.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The result of the operation.</returns>
+    public async Task<ExpenseDraftResult> SubmitAsync(
+        int expenseId,
+        string ownerId,
+        CancellationToken cancellationToken)
+    {
+        Expense? expense =
+            await _context.Expenses
+                .Include(item => item.History)
+                .SingleOrDefaultAsync(
+                    item =>
+                        item.Id == expenseId &&
+                        item.OwnerId == ownerId,
+                    cancellationToken);
+
+        if (expense is null)
+        {
+            return ExpenseDraftResult.NotFound();
+        }
+
+        if (expense.Status != ExpenseStatus.Draft)
+        {
+            return ExpenseDraftResult.Conflict(expense);
+        }
+
+        expense.Status = ExpenseStatus.Submitted;
+
+        ExpenseWorkflowService.AddHistory(
+            expense,
+            ownerId,
+            "Submitted",
+            ExpenseStatus.Draft,
+            ExpenseStatus.Submitted,
+            DateTime.UtcNow);
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return ExpenseDraftResult.Success(expense);
+    }
 }
 
 /// <summary>
-/// Represents the result of a draft creation or update operation.
+/// Represents the result of a draft creation, update or submission operation.
 /// </summary>
 public sealed class ExpenseDraftResult
 {
@@ -275,7 +323,7 @@ public enum ExpenseDraftOutcome
     NotFound,
 
     /// <summary>
-    /// The expense is no longer editable.
+    /// The expense is no longer editable or submitable.
     /// </summary>
     Conflict,
 
