@@ -78,13 +78,54 @@ public sealed class ExpenseAccessServiceTests
         CollectionAssert.AreEqual(new List<int> { 1, 2, 3, 4 }, visibleIds);
     }
 
-    private static ClaimsPrincipal CreateUser(string id, string role)
+    /// <summary>
+    /// Verifies that accumulated roles receive the union of their read permissions.
+    /// </summary>
+    [TestMethod]
+    public void ApplyVisibility_WhenUserIsEmployeeAndApprover_ReturnsOwnAndSubmittedExpenses()
+    {
+        ClaimsPrincipal employeeApprover = CreateUser(
+            "employee-a",
+            "Employee",
+            "Approver");
+        IQueryable<Expense> expenses = CreateExpenses();
+
+        List<int> visibleIds = ExpenseAccessService.ApplyVisibility(
+                expenses,
+                employeeApprover)
+            .Select(expense => expense.Id)
+            .ToList();
+
+        CollectionAssert.AreEqual(new List<int> { 1, 2 }, visibleIds);
+    }
+
+    /// <summary>
+    /// Verifies that the Admin role does not grant functional expense access.
+    /// </summary>
+    [TestMethod]
+    public void ApplyVisibility_WhenUserIsOnlyAdmin_ReturnsNoExpenses()
+    {
+        ClaimsPrincipal admin = CreateUser("admin-a", "Admin");
+        IQueryable<Expense> expenses = CreateExpenses();
+
+        List<int> visibleIds = ExpenseAccessService.ApplyVisibility(expenses, admin)
+            .Select(expense => expense.Id)
+            .ToList();
+
+        Assert.AreEqual(0, visibleIds.Count);
+    }
+
+    private static ClaimsPrincipal CreateUser(string id, params string[] roles)
     {
         ClaimsIdentity identity = new(
         [
-            new Claim(ClaimTypes.NameIdentifier, id),
-            new Claim(ClaimTypes.Role, role)
+            new Claim(ClaimTypes.NameIdentifier, id)
         ], "test");
+
+        foreach (string role in roles)
+        {
+            identity.AddClaim(new Claim(ClaimTypes.Role, role));
+        }
 
         return new ClaimsPrincipal(identity);
     }

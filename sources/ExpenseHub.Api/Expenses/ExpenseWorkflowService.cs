@@ -49,13 +49,27 @@ public sealed class ExpenseWorkflowService(AppDbContext context)
     /// <param name="justification">Validated rejection justification.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The workflow result.</returns>
-    public Task<ExpenseWorkflowResult> RejectAsync(
+    public async Task<ExpenseWorkflowResult> RejectAsync(
         int expenseId,
         string actorId,
         bool isApprover,
-        string justification,
-        CancellationToken cancellationToken) =>
-        TransitionAsync(
+        string? justification,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(justification))
+        {
+            return ExpenseWorkflowResult.InvalidJustification();
+        }
+
+        string normalizedJustification = justification.Trim();
+
+        if (normalizedJustification.Length < 10 ||
+            normalizedJustification.Length > 500)
+        {
+            return ExpenseWorkflowResult.InvalidJustification();
+        }
+
+        return await TransitionAsync(
             expenseId,
             actorId,
             isApprover,
@@ -63,8 +77,9 @@ public sealed class ExpenseWorkflowService(AppDbContext context)
             ExpenseStatus.Submitted,
             ExpenseStatus.Rejected,
             "Rejected",
-            justification,
+            normalizedJustification,
             cancellationToken);
+    }
 
     /// <summary>
     /// Pays an approved expense when the actor has the Finance role and is not its owner.
@@ -274,6 +289,13 @@ public sealed class ExpenseWorkflowResult
     /// <returns>A conflict result.</returns>
     public static ExpenseWorkflowResult Conflict(Expense expense) =>
         new(ExpenseWorkflowOutcome.Conflict, expense, null);
+
+    /// <summary>
+    /// Creates a result for an invalid rejection justification.
+    /// </summary>
+    /// <returns>An invalid justification result.</returns>
+    public static ExpenseWorkflowResult InvalidJustification() =>
+        new(ExpenseWorkflowOutcome.InvalidJustification, null, null);
 }
 
 /// <summary>
@@ -299,5 +321,10 @@ public enum ExpenseWorkflowOutcome
     /// <summary>
     /// The expense is in an incompatible status.
     /// </summary>
-    Conflict
+    Conflict,
+
+    /// <summary>
+    /// The rejection justification is empty or outside the allowed length.
+    /// </summary>
+    InvalidJustification
 }

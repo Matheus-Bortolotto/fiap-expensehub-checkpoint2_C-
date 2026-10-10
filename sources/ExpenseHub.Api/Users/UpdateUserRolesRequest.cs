@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ExpenseHub.Api.Users;
 
 /// <summary>
@@ -8,5 +10,6 @@ public sealed class UpdateUserRolesRequest
     /// <summary>
     /// Gets or sets the complete list of roles assigned to the user.
     /// </summary>
+    [Required]
     public string[] Roles { get; set; } = [];
 }

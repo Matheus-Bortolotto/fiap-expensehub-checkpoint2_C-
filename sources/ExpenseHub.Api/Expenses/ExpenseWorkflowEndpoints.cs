@@ -30,10 +30,22 @@ public static class ExpenseWorkflowEndpoints
         RouteGroupBuilder expenses = app.MapGroup("/api/expenses")
             .RequireAuthorization();
 
-        expenses.MapPost("/{id:int}/approve", ApproveAsync);
-        expenses.MapPost("/{id:int}/reject", RejectAsync);
-        expenses.MapPost("/{id:int}/pay", PayAsync);
-        expenses.MapGet("/{id:int}/history", GetHistoryAsync);
+        expenses.MapPost("/{id:int}/approve", ApproveAsync)
+            .RequireAuthorization(policy =>
+                policy.RequireRole(ApplicationRoles.Approver));
+        expenses.MapPost("/{id:int}/reject", RejectAsync)
+            .RequireAuthorization(policy =>
+                policy.RequireRole(ApplicationRoles.Approver));
+        expenses.MapPost("/{id:int}/pay", PayAsync)
+            .RequireAuthorization(policy =>
+                policy.RequireRole(ApplicationRoles.Finance));
+        expenses.MapGet("/{id:int}/history", GetHistoryAsync)
+            .RequireAuthorization(policy =>
+                policy.RequireRole(
+                    ApplicationRoles.Employee,
+                    ApplicationRoles.Approver,
+                    ApplicationRoles.Finance,
+                    ApplicationRoles.Auditor));
 
         return app;
     }
@@ -79,7 +91,7 @@ public static class ExpenseWorkflowEndpoints
             id,
             ExpenseAccessService.GetRequiredUserId(user),
             user.IsInRole(ApplicationRoles.Approver),
-            request.Justification.Trim(),
+            request.Justification,
             cancellationToken);
 
         return ToHttpResult(result);
@@ -107,7 +119,7 @@ public static class ExpenseWorkflowEndpoints
         CancellationToken cancellationToken)
     {
         Expense? expense = await ExpenseAccessService.ApplyVisibility(
-                context.Expenses,
+                context.Expenses.AsNoTracking(),
                 user)
             .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
@@ -141,6 +153,15 @@ public static class ExpenseWorkflowEndpoints
             ExpenseWorkflowOutcome.NotFound => Results.NotFound(),
             ExpenseWorkflowOutcome.Forbidden => Results.Forbid(),
             ExpenseWorkflowOutcome.Conflict => Results.Conflict(),
+            ExpenseWorkflowOutcome.InvalidJustification =>
+                Results.ValidationProblem(
+                    new Dictionary<string, string[]>
+                    {
+                        ["Justification"] =
+                        [
+                            "The justification must contain between 10 and 500 characters after trimming whitespace."
+                        ]
+                    }),
             _ => Results.StatusCode(StatusCodes.Status500InternalServerError)
         };
 }
