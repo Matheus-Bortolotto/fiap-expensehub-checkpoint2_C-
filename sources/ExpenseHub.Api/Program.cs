@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Auth;
@@ -146,6 +148,31 @@ internal static class Program
                 UserManager<ApplicationUser> userManager,
                 JwtTokenService tokenService) =>
             {
+                List<ValidationResult> validationResults = [];
+                bool isValid = Validator.TryValidateObject(
+                    request,
+                    new ValidationContext(request),
+                    validationResults,
+                    validateAllProperties: true);
+
+                if (!isValid)
+                {
+                    return Results.ValidationProblem(
+                        validationResults
+                            .GroupBy(
+                                result =>
+                                    result.MemberNames.FirstOrDefault()
+                                    ?? string.Empty)
+                            .ToDictionary(
+                                group => group.Key,
+                                group => group
+                                    .Select(
+                                        result =>
+                                            result.ErrorMessage
+                                            ?? "Invalid value.")
+                                    .ToArray()));
+                }
+
                 ApplicationUser? user =
                     await userManager.FindByEmailAsync(
                         request.Email);
