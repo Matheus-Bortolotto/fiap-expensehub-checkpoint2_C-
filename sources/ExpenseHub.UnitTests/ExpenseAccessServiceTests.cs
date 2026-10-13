@@ -112,7 +112,7 @@ public sealed class ExpenseAccessServiceTests
             .Select(expense => expense.Id)
             .ToList();
 
-        Assert.AreEqual(0, visibleIds.Count);
+        Assert.IsEmpty(visibleIds);
     }
 
     private static ClaimsPrincipal CreateUser(string id, params string[] roles)
