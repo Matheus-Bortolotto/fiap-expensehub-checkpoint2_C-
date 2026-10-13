@@ -8,7 +8,7 @@ namespace ExpenseHub.Api.Data;
 
 internal static class ExpenseCategorySeeder
 {
-    private static readonly string[] DefaultCategoryNames =
+    private static readonly string[] _defaultCategoryNames =
     [
         "Food",
         "Transportation",
@@ -29,7 +29,7 @@ internal static class ExpenseCategorySeeder
                 System.StringComparer.OrdinalIgnoreCase);
 
         string[] missingCategoryNames =
-            DefaultCategoryNames
+            _defaultCategoryNames
                 .Where(name => !existingNameSet.Contains(name))
                 .ToArray();
 
